@@ -2,23 +2,21 @@
 
 // Data enable
 #ifdef DATA_ENABLE
-  // Data store mode
-  #ifndef DATA_STORE_MODE
-    #define DATA_STORE_MODE 1
-  #endif
-  
-  #if DATA_STORE_MODE != 1
-    #error "Invalid data store mode selected. Available solutions: 1. SD Card"
-  #endif
-
   // Data rate
   #ifndef DATA_RATE
     #define DATA_RATE 10*1000
   #endif
-
-  // Data filename
-  #ifndef DATA_FILENAME
-    #define DATA_FILENAME "data"
+  // Error if SIM APN is not defined
+  #ifndef DATA_STORE_SIM_APN
+    #error "Missing SIM APN"
+  #endif
+  // Set SIM pin if not already
+  #ifndef DATA_STORE_SIM_PIN
+    #define DATA_STORE_SIM_PIN ""
+  #endif
+  // Error if no phone number is provided
+  #ifndef DATA_STORE_SIM_TARGET_NUMBERS
+    #error "Missing phone numbers"
   #endif
 #endif
 
@@ -52,49 +50,57 @@
   #endif
 #endif
 
-#ifdef HUMIDITY_ENABLE
-  #ifndef HUMIDITY_SENSOR_PIN
-    #error "Humidity sensor is not defined!"
+#ifdef ENVIRONMENT_ENABLE
+  #ifndef ENVIRONMENT_HUMIDITY_ENABLE
+    #ifndef ENVIRONMENT_TEMPERATURE_ENABLE
+      #error "Either humidity or temperature must be enable for the environment"
+    #endif
+  #endif
+
+
+  #ifndef ENVIRONMENT_SENSOR_PIN
+    #error "Environment sensor is not defined!"
   #endif
   
-  #ifndef HUMIDITY_THRESHOLD
-    #error "Humidity threshold is not defined!"
+  #ifndef ENVIRONMENT_FANS_PIN
+    #error "Environment fans pin is not defined!"
+  #endif
+  
+  #ifndef ENVIRONMENT_FANS_TIME
+    #define ENVIRONMENT_FANS_TIME 30*1000
   #endif
 
-  #ifndef HUMIDITY_FANS_PIN
-    #error "Humidity fans pin is not defined!"
+  #ifdef ENVIRONMENT_HUMIDITY_ENABLE
+    #ifndef ENVIRONMENT_HUMIDITY_THRESHOLD
+      #error "Humidity threshold is not defined!"
+    #endif
   #endif
 
-  #ifndef HUMIDITY_FANS_MINIMUM_TIME
-    #define HUMIDITY_FANS_MINIMUM_TIME 30*1000
+  #ifdef ENVIRONMENT_TEMPERATURE_ENABLE
+    #ifndef ENVIRONMENT_TEMPERATURE_THRESHOLD
+      #error "Temperature threshold is not defined!"
+    #endif
   #endif
 #endif
 
-#ifdef LIGHT_CONTROL_ENABLE
-  #ifndef LIGHT_CONTROL_SENSOR_PIN
+#ifdef LIGHT_ENABLE
+  #ifndef LIGHT_SENSOR_PIN
     #error "Light sensor is not defined!"
   #endif
   
-  #ifndef LIGHT_CONTROL_THRESHOLD
+  #ifndef LIGHT_THRESHOLD
     #error "Light threshold is not defined!"
   #endif
 
-  #ifndef LIGHT_CONTROL_LEDS_PIN
+  #ifndef LIGHT_LEVEL_MIN
+    #error "Light level min is not defined!"
+  #endif
+
+  #ifndef LIGHT_LEVEL_MAX
+    #error "Light level max is not defined!"
+  #endif
+
+  #ifndef LIGHT_LEDS_PIN
     #error "LEDs pin is not defined!"
   #endif
 #endif
-
-#ifdef RTC_ENABLE
-  #ifndef RTC_INTERRUPT_PIN
-    #error "RTC interrupt pin is not defined!";
-  #endif
-
-  #ifndef RTC_SLEEP_START
-    #define RTC_SLEEP_START 21
-  #endif
-  
-  #ifndef RTC_SLEEP_END
-    #define RTC_SLEEP_END 5
-  #endif
-#endif
-
