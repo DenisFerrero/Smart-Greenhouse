@@ -53,7 +53,7 @@ void loop() {
   #endif
 
   #ifdef ENVIRONMENT_ENABLE
-    // Humdity is over the allowed threshold
+    // Humidity is over the allowed threshold
     bool humidity_overThreshold = false;
     // Temperature is over the allowed threshold
     bool temperature_overThreshold = false;

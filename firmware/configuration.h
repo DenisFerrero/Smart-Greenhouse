@@ -6,11 +6,11 @@
 // Store data each X milliseconds. Default 10*1000 (10 seconds)
 #define DATA_RATE 10*1000
 // SIM APN
-#define DATA_STORE_SIM_APN "iliad"
+#define DATA_STORE_SIM_APN ""
 // SIM PIN
-#define DATA_STORE_SIM_PIN "1234"
+#define DATA_STORE_SIM_PIN ""
 // Phone numbers to send the message, multiple numbers separated by comma
-#define DATA_STORE_SIM_TARGET_NUMBERS "+393925423403"
+#define DATA_STORE_SIM_TARGET_NUMBERS ""
 
 // Enable terrain moisture check
 #define MOISTURE_ENABLE

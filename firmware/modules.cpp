@@ -1,11 +1,11 @@
 #include "esp_bt.h"
 #include <WiFi.h>
 #include <configuration.h>
+#include "DHT.h"
+#include <vector> 
 
-#ifdef ENVIRONMENT_ENABLE
-  #include "DHT.h"
-  DHT environment_Sensor(ENVIRONMENT_SENSOR_PIN, DHT21);
-#endif
+DHT environment_Sensor(ENVIRONMENT_SENSOR_PIN, DHT21);
+std::vector<String> phoneNumbers;
 
 // Additional required parameters to init modem (for GPS/SIM). From https://randomnerdtutorials.com/lilygo-ttgo-t-a7670g-a7670e-a7670sa-esp32/
 #define TINY_GSM_RX_BUFFER 1024 // Set RX buffer to 1Kb
@@ -261,7 +261,12 @@ void data_Store(float moisture, float humidity, float temperature, float light) 
     Serial.print(", light = ");
     Serial.println(light);
 
-    // TODO Send SMS
+    String smsMessage = "Keep alive greenhouse.\nMoisture level: " + String(moisture) + "\nHumidity level: " + String(humidity) + "\nTemperature: " + String(temperature) + "\nLight: " + String(light);
+    for (const auto& num : phoneNumbers) {
+      String message = modem.sendSMS(num, smsMessage) ? "SMS sent successfully to " : "SMS failed to sent to ";
+      Serial.print(message);
+      Serial.println(num);
+    }
   #endif
   
 }
@@ -295,7 +300,7 @@ void startup () {
   digitalWrite(BOARD_PWRKEY_PIN, LOW);
 
   // Check if the modem is online
-  Serial.println("Start modem...");
+  Serial.print("Start modem...");
 
   int retry = 0;
   while (!modem.testAT(1000)) {
@@ -416,5 +421,20 @@ void startup () {
 
     String ipAddress = modem.getLocalIP();
     Serial.print("Network IP:"); Serial.println(ipAddress);
+
+    // Compile phone numbers
+    int start = 0;
+    
+    String targets = DATA_STORE_SIM_TARGET_NUMBERS;
+    for (int i = 0; i < targets.length(); i++) {
+      if (targets[i] == ',') {
+        phoneNumbers.push_back(targets.substring(start, i));
+        start = i + 1;
+      }
+    }
+    // Add last number (after last comma)
+    if (start < targets.length()) {
+      phoneNumbers.push_back(targets.substring(start));
+    }
   #endif
 }
