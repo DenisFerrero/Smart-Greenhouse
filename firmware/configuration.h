@@ -58,3 +58,12 @@
 #define LIGHT_LEVEL_MAX 1000
 // LEDs relay pin
 #define LIGHT_LEDS_PIN 0
+
+// Enable sleep mode. Turn off the device at target hour and back on at target hour
+#define SLEEP_ENABLE
+// Sleep starts at
+#define SLEEP_START_TIME 23
+// Sleep ends at
+#define SLEEP_END_TIME 5
+// When gathering the time using GPS it's in in UTC, so shift it using an integer
+#define SLEEP_TIMEZONE_OFFSET 2

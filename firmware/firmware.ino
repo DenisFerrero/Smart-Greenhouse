@@ -12,7 +12,7 @@ long data_LastLog = -1;
 void setup() {
   Serial.begin(115200);
   // Wait for serial to bind correctly
-  delay(3 * 1000);
+  delay(5 * 1000);
   printVariables();
 
   startup();
@@ -115,5 +115,11 @@ void loop() {
       data_Store(moisture, humidity, temperature, light);
       data_LastLog = millis();
     }
+  #endif
+
+  smartDelay(1);
+
+  #ifdef SLEEP_ENABLE
+    sleep_Check();
   #endif
 }

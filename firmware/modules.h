@@ -17,4 +17,7 @@ void light_LEDs_OFF();
 
 void data_Store(float moisture, float humidity, float temperature, float light);
 
+void sleep_Check();
+
 void startup ();
+void smartDelay(unsigned long ms);

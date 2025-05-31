@@ -104,3 +104,15 @@
     #error "LEDs pin is not defined!"
   #endif
 #endif
+
+#ifdef SLEEP_ENABLE
+  #ifndef SLEEP_START_TIME
+    #error "Sleep start time is not defined!"
+  #endif
+  #ifndef SLEEP_END_TIME
+    #error "Sleep end time is not defined!"
+  #endif
+  #ifndef SLEEP_TIMEZONE_OFFSET
+    #define SLEEP_TIMEZONE_OFFSET 0
+  #endif
+#endif

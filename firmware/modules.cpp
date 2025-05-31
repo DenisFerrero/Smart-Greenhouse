@@ -2,44 +2,44 @@
 #include <WiFi.h>
 #include <configuration.h>
 #include "DHT.h"
-#include <vector> 
+#include <vector>
+#include <TinyGPSPlus.h>
 
 DHT environment_Sensor(ENVIRONMENT_SENSOR_PIN, DHT21);
 std::vector<String> phoneNumbers;
 
 // Additional required parameters to init modem (for GPS/SIM). From https://randomnerdtutorials.com/lilygo-ttgo-t-a7670g-a7670e-a7670sa-esp32/
 #define TINY_GSM_RX_BUFFER 1024 // Set RX buffer to 1Kb
-#define LILYGO_T_A7670
-#if defined(LILYGO_T_A7670)
-  #define MODEM_BAUDRATE                      (115200)
-  #define MODEM_DTR_PIN                       (25)
-  #define MODEM_TX_PIN                        (26)
-  #define MODEM_RX_PIN                        (25)
-  // The modem boot pin needs to follow the startup sequence.
-  #define BOARD_PWRKEY_PIN                    (4)
-  #define BOARD_ADC_PIN                       (35)
-  // The modem power switch must be set to HIGH for the modem to supply power.
-  #define BOARD_POWERON_PIN                   (12)
-  #define MODEM_RING_PIN                      (33)
-  #define MODEM_RESET_PIN                     (5)
-  #define BOARD_MISO_PIN                      (2)
-  #define BOARD_MOSI_PIN                      (15)
-  #define BOARD_SCK_PIN                       (14)
-  #define BOARD_SD_CS_PIN                     (13)
-  #define BOARD_BAT_ADC_PIN                   (35)
-  #define MODEM_RESET_LEVEL                   HIGH
-  #define SerialAT                            Serial1
-  #define MODEM_GPS_ENABLE_GPIO               (-1)
-  #define MODEM_GPS_ENABLE_LEVEL              (-1)
-  #ifndef TINY_GSM_MODEM_A7670
-    #define TINY_GSM_MODEM_A7670
-  #endif
+
+#define LILYGO_T_CALL_A7670_V1_0
+#define MODEM_BAUDRATE                      (115200)
+#define MODEM_DTR_PIN                       (14)
+#define MODEM_TX_PIN                        (26)
+#define MODEM_RX_PIN                        (25)
+// The modem boot pin needs to follow the startup sequence.
+#define BOARD_PWRKEY_PIN                    (4)
+#define BOARD_LED_PIN                       (12)
+// There is no modem power control, the LED Pin is used as a power indicator here.
+#define BOARD_POWERON_PIN                   (BOARD_LED_PIN)
+#define MODEM_RING_PIN                      (13)
+#define MODEM_RESET_PIN                     (27)
+#define MODEM_RESET_LEVEL                   LOW
+#define SerialAT                            Serial1
+
+#define MODEM_GPS_ENABLE_GPIO               (-1)
+#define MODEM_GPS_ENABLE_LEVEL              (-1)
+
+#ifndef TINY_GSM_MODEM_A7670
+  #define TINY_GSM_MODEM_A7670
 #endif
 
 #include <TinyGsmClient.h>
 
 TinyGsm modem(SerialAT);
 TinyGsmClient gsmNet(modem);
+
+#include <TinyGPSPlus.h>
+TinyGPSPlus gps;
 
 void printVariables () {
   #if START_UP_PRINT_ENV == 1
@@ -171,6 +171,28 @@ void printVariables () {
 
     #pragma endregion Light
 
+    #pragma region Sleep
+    Serial.println("[Sleep]");
+    Serial.print("Sleep enable: ");
+
+    #ifdef SLEEP_ENABLE
+      Serial.println("1");
+
+      Serial.print("Sleep start time: ");
+      Serial.println(SLEEP_START_TIME);
+
+      Serial.print("Sleep end time: ");
+      Serial.println(SLEEP_END_TIME);
+
+      Serial.print("Sleep timezone offset: ");
+      Serial.println(SLEEP_TIMEZONE_OFFSET);
+    #endif
+    #ifndef SLEEP_ENABLE
+      Serial.println("0");
+    #endif
+
+    #pragma endregion Sleep
+
     Serial.println();
   #endif
 }
@@ -250,9 +272,16 @@ void light_LEDs_OFF () {
 
 #pragma region Data
 
+// Returns current hour
+ushort getCurrentHour() {
+  return gps.time.hour() + SLEEP_TIMEZONE_OFFSET;
+}
+
 void data_Store(float moisture, float humidity, float temperature, float light) {
   #ifdef DATA_ENABLE
-    Serial.print("Store data: moisture = ");
+    ushort hour = getCurrentHour();
+    Serial.print(hour);
+    Serial.print(" - Store data: moisture = ");
     Serial.print(moisture);
     Serial.print(", humidity = ");
     Serial.print(humidity);
@@ -260,6 +289,12 @@ void data_Store(float moisture, float humidity, float temperature, float light) 
     Serial.print(temperature);
     Serial.print(", light = ");
     Serial.println(light);
+
+    Serial.print("Satellites: ");
+    Serial.println(gps.satellites.value()); // Number of satellites in use (u32)
+    
+    String ret = String(gps.date.year()) + "-" + String(gps.date.month()) + "-" + String(gps.date.day()) + " " + String(gps.time.hour()) + ":" + String(gps.time.minute()) + ":" + String(gps.time.second());
+    Serial.println(ret);
 
     String smsMessage = "Keep alive greenhouse.\nMoisture level: " + String(moisture) + "\nHumidity level: " + String(humidity) + "\nTemperature: " + String(temperature) + "\nLight: " + String(light);
     for (const auto& num : phoneNumbers) {
@@ -272,6 +307,40 @@ void data_Store(float moisture, float humidity, float temperature, float light) 
 }
 
 #pragma endregion Data
+
+#pragma region Sleep
+
+void sleep_Check () {
+  ushort hour = getCurrentHour();
+  // Normal time, for example 14 to 22
+  #if SLEEP_START_TIME < SLEEP_END_TIME
+    bool inside = hour >= SLEEP_START_TIME && hour <= SLEEP_END_TIME;
+  #endif
+  // Day overlap time, for example 22 to 06
+  #if SLEEP_START_TIME > SLEEP_END_TIME
+    bool inside = hour >= SLEEP_START_TIME || hour <= SLEEP_END_TIME;
+  #endif
+
+  if (inside) {
+    #if SLEEP_START_TIME < SLEEP_END_TIME
+      bool time = (SLEEP_END_TIME - SLEEP_START_TIME);
+    #endif
+    #if SLEEP_START_TIME > SLEEP_END_TIME
+      bool time = ((24 - SLEEP_START_TIME) + SLEEP_END_TIME);
+    #endif
+
+    Serial.print("Go to sleep for ");
+    Serial.print(time);
+    Serial.println(" hours!");
+    // https://randomnerdtutorials.com/esp32-deep-sleep-arduino-ide-wake-up-sources/
+    // Wake up timer (time * minutes in an hour * seconds in an hour * microseconds in a second)
+    esp_sleep_enable_timer_wakeup(time * 60 * 60 * 1000000ULL);
+    // Go to sleep
+    esp_deep_sleep_start();
+  }
+}
+
+#pragma endregion Sleep
 
 void startup () {
   // - Turn off WiFi
@@ -417,7 +486,24 @@ void startup () {
     if (!modem.setNetworkActive()) {
       Serial.println("Enable network failed!");
     }
-    delay(5000);
+
+    Serial.println("Enabling GPS/GNSS/GLONASS");
+    while (!modem.enableGPS(MODEM_GPS_ENABLE_GPIO, MODEM_GPS_ENABLE_LEVEL)) {
+        Serial.print(".");
+    }
+
+    Serial.println();
+    Serial.println("GPS Enabled");
+
+    modem.setGPSBaud(115200);
+
+    modem.setGPSMode(3);    //GPS + BD
+
+    modem.configNMEASentence(1, 1, 1, 1, 1, 1);
+
+    modem.setGPSOutputRate(1);
+
+    modem.enableNMEA();
 
     String ipAddress = modem.getLocalIP();
     Serial.print("Network IP:"); Serial.println(ipAddress);
@@ -437,4 +523,17 @@ void startup () {
       phoneNumbers.push_back(targets.substring(start));
     }
   #endif
+}
+
+// This custom version of delay() ensures that the gps object is being "fed".
+void smartDelay(unsigned long ms)
+{
+  int ch = 0;
+  unsigned long start = millis();
+  do {
+    while (SerialAT.available()) {
+      ch = SerialAT.read();
+      gps.encode(ch);
+    }
+  } while (millis() - start < ms);
 }
