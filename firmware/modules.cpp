@@ -42,7 +42,7 @@ TinyGsmClient gsmNet(modem);
 TinyGPSPlus gps;
 
 void printVariables () {
-  #if START_UP_PRINT_ENV == 1
+  #ifdef DEBUG
     Serial.println("--- Environmental variables ---");
     
     #pragma region Data
@@ -164,6 +164,9 @@ void printVariables () {
 
       Serial.print("Light LEDs pin: ");
       Serial.println(LIGHT_LEDS_PIN);
+      
+      Serial.print("Light LEDs time ON: ");
+      Serial.println(LIGHT_LEDS_TIME);
     #endif
     #ifndef LIGHT_ENABLE
       Serial.println("0");
@@ -256,7 +259,7 @@ float light_GetLevel () {
   float rawValue = analogRead(LIGHT_SENSOR_PIN);
   
   // Convert to light percentage
-  float lightPercentage = map(rawValue, LIGHT_LEVEL_MIN, LIGHT_LEVEL_MIN, 0, 100);
+  float lightPercentage = map(rawValue, LIGHT_LEVEL_MIN, LIGHT_LEVEL_MAX, 0, 100);
   return constrain(lightPercentage, 0, 100);
 }
 
@@ -272,31 +275,40 @@ void light_LEDs_OFF () {
 
 #pragma region Data
 
+
 // Returns current hour
-ushort getCurrentHour() {
-  return gps.time.hour() + SLEEP_TIMEZONE_OFFSET;
+short getCurrentHour() {
+  // When starting up will happen that the GPS is not reachable and return all 0 (satellites = 0). In that case return -1
+  if(gps.satellites.value() == 0) return -1;
+
+  short hour = gps.time.hour() + SLEEP_TIMEZONE_OFFSET;
+  // If the value of hours exceed the 24h. For example in case of 11PM + timezone 2h = 25 => 01AM
+  if (hour >= 24) return hour -24;
+  else return hour;
+
 }
 
 void data_Store(float moisture, float humidity, float temperature, float light) {
   #ifdef DATA_ENABLE
-    ushort hour = getCurrentHour();
-    Serial.print(hour);
-    Serial.print(" - Store data: moisture = ");
-    Serial.print(moisture);
-    Serial.print(", humidity = ");
-    Serial.print(humidity);
-    Serial.print(", temperature = ");
-    Serial.print(temperature);
-    Serial.print(", light = ");
-    Serial.println(light);
+    #ifdef DEBUG
+      Serial.print("Store data: moisture = ");
+      Serial.print(moisture);
+      Serial.print(", humidity = ");
+      Serial.print(humidity);
+      Serial.print(", temperature = ");
+      Serial.print(temperature);
+      Serial.print(", light = ");
+      Serial.println(light);
 
-    Serial.print("Satellites: ");
-    Serial.println(gps.satellites.value()); // Number of satellites in use (u32)
-    
-    String ret = String(gps.date.year()) + "-" + String(gps.date.month()) + "-" + String(gps.date.day()) + " " + String(gps.time.hour()) + ":" + String(gps.time.minute()) + ":" + String(gps.time.second());
-    Serial.println(ret);
+      Serial.print("Satellites: ");
+      Serial.println(gps.satellites.value()); // Number of satellites in use (u32)
 
-    String smsMessage = "Keep alive greenhouse.\nMoisture level: " + String(moisture) + "\nHumidity level: " + String(humidity) + "\nTemperature: " + String(temperature) + "\nLight: " + String(light);
+	    String ret = String(gps.date.year()) + "-" + String(gps.date.month()) + "-" + String(gps.date.day()) + " " + String(gps.time.hour()) + ":" + String(gps.time.minute()) + ":" + String(gps.time.second());
+      Serial.print("UTC Time: ");
+      Serial.println(ret);
+    #endif
+
+    String smsMessage = "Periodic greenhouse report.\nMoisture level: " + String(moisture) + "\nHumidity level: " + String(humidity) + "\nTemperature: " + String(temperature) + "\nLight: " + String(light);
     for (const auto& num : phoneNumbers) {
       String message = modem.sendSMS(num, smsMessage) ? "SMS sent successfully to " : "SMS failed to sent to ";
       Serial.print(message);
@@ -311,7 +323,10 @@ void data_Store(float moisture, float humidity, float temperature, float light) 
 #pragma region Sleep
 
 void sleep_Check () {
-  ushort hour = getCurrentHour();
+  short hour = getCurrentHour();
+
+  if (hour == -1) return;
+
   // Normal time, for example 14 to 22
   #if SLEEP_START_TIME < SLEEP_END_TIME
     bool inside = hour >= SLEEP_START_TIME && hour <= SLEEP_END_TIME;
@@ -403,11 +418,11 @@ void startup () {
   #endif 
 
   // Light control
-  #ifdef LIGHT_CONTROL_ENABLE
+  #ifdef LIGHT_ENABLE
     // Sensor pin
-    pinMode(LIGHT_CONTROL_SENSOR_PIN, INPUT);
+    pinMode(LIGHT_SENSOR_PIN, INPUT);
     // Turn-off the LEDs
-    pinMode(LIGHT_CONTROL_LEDS_PIN, OUTPUT);
+    pinMode(LIGHT_LEDS_PIN, OUTPUT);
     light_LEDs_OFF();
   #endif
 

@@ -6,8 +6,11 @@ long moisture_PumpWater_LastTrigger = -1;
 long environment_Fans_TimeOn = -1;
 
 bool light_isOn = false;
+long leds_TimeOn = -1;
 
 long data_LastLog = -1;
+
+unsigned long counterTime = 0;
 
 void setup() {
   Serial.begin(115200);
@@ -16,6 +19,8 @@ void setup() {
   printVariables();
 
   startup();
+
+  counterTime = millis();
 }
 
 void loop() {
@@ -95,6 +100,7 @@ void loop() {
     light = light_GetLevel();
 
     bool light_underThreshold = light < LIGHT_THRESHOLD;
+    bool light_elapsedRunningTime = light_isOn && millis() - leds_TimeOn > LIGHT_LEDS_TIME;
 
     if (light_underThreshold && !light_isOn) {
       Serial.print("Light level under threshold: ");
@@ -103,9 +109,11 @@ void loop() {
 
       light_LEDs_ON();
       light_isOn = true;
-    } else if (!light_underThreshold && light_isOn) {
+      leds_TimeOn = millis();
+    } else if (!light_underThreshold && light_isOn && light_elapsedRunningTime ) {
       light_LEDs_OFF();
       light_isOn = false;
+      leds_TimeOn = -1;
     }
   #endif
 
@@ -118,6 +126,25 @@ void loop() {
   #endif
 
   smartDelay(1);
+
+  #ifdef DEBUG
+    // Every second log the data over the serial
+    if((counterTime + 1000) < millis()){
+      Serial.print("Humidity: ");
+      Serial.println(environment_Humidity_GetLevel());
+
+      Serial.print("Temperature: ");
+      Serial.println(environment_Temperature_GetLevel());
+
+      Serial.print("Moisture: ");
+      Serial.println(moisture_GetLevel());
+
+      Serial.print("Light: ");
+      Serial.println(light_GetLevel());
+
+      counterTime = millis();
+    }
+  #endif
 
   #ifdef SLEEP_ENABLE
     sleep_Check();

@@ -103,6 +103,10 @@
   #ifndef LIGHT_LEDS_PIN
     #error "LEDs pin is not defined!"
   #endif
+
+  #ifndef LIGHT_LEDS_TIME
+    #define LIGHT_LEDS_TIME 2*1000
+  #endif
 #endif
 
 #ifdef SLEEP_ENABLE
