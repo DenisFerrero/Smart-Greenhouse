@@ -7,10 +7,16 @@ long environment_Fans_TimeOn = -1;
 
 bool light_isOn = false;
 long leds_TimeOn = -1;
+long leds_LastTrigger = -1;
 
 long data_LastLog = -1;
 
 unsigned long counterTime = 0;
+
+float moisture = -1;
+float humidity = -1;
+float temperature = -1;
+float light = -1;
 
 void setup() {
   Serial.begin(115200);
@@ -24,14 +30,12 @@ void setup() {
 }
 
 void loop() {
-  float moisture = -1;
-  float humidity = -1;
-  float temperature = -1;
-  float light = -1;
+  moisture = moisture_GetLevel();
+  humidity = environment_Humidity_GetLevel();
+  temperature = environment_Temperature_GetLevel();
+  light = light_GetLevel();
 
   #ifdef MOISTURE_ENABLE
-    moisture = moisture_GetLevel();
-
     // Water level is under the threshold
     bool moisture_underThreshold = moisture <= MOISTURE_THRESHOLD;
     // The water pump is off
@@ -65,12 +69,10 @@ void loop() {
 
     // Calculate it only if the humidity detection is enabled
     #ifdef ENVIRONMENT_HUMIDITY_ENABLE
-      humidity = environment_Humidity_GetLevel();
       humidity_overThreshold = humidity >= ENVIRONMENT_HUMIDITY_THRESHOLD;
     #endif
     // Calculate it only if the temperature detection is enabled
     #ifdef ENVIRONMENT_TEMPERATURE_ENABLE
-      temperature = environment_Temperature_GetLevel();
       temperature_overThreshold = temperature >= ENVIRONMENT_TEMPERATURE_THRESHOLD;
     #endif
 
@@ -97,12 +99,13 @@ void loop() {
   #endif
 
   #ifdef LIGHT_ENABLE
-    light = light_GetLevel();
-
     bool light_underThreshold = light < LIGHT_THRESHOLD;
+    // Minimum time between one trigger to another is elapsed. At first init check also if -1 to prevent trigger for the first time after LIGHT_LEDS_MINIMUM_DELAY ms  
+    bool light_elapsedMinimumTime = (leds_LastTrigger == -1 || (millis() - leds_LastTrigger) > LIGHT_LEDS_MINIMUM_DELAY); 
+    // Minimum time of which the leds must be on
     bool light_elapsedRunningTime = light_isOn && millis() - leds_TimeOn > LIGHT_LEDS_TIME;
 
-    if (light_underThreshold && !light_isOn) {
+    if (light_underThreshold && !light_isOn && light_elapsedMinimumTime) {
       Serial.print("Light level under threshold: ");
       Serial.print(light);
       Serial.println("%. Turning on the LEDs...");
@@ -110,10 +113,11 @@ void loop() {
       light_LEDs_ON();
       light_isOn = true;
       leds_TimeOn = millis();
-    } else if (!light_underThreshold && light_isOn && light_elapsedRunningTime ) {
+    } else if (!light_underThreshold && light_isOn && light_elapsedRunningTime) {
       light_LEDs_OFF();
       light_isOn = false;
       leds_TimeOn = -1;
+      leds_LastTrigger = millis();
     }
   #endif
 
@@ -130,17 +134,17 @@ void loop() {
   #ifdef DEBUG
     // Every second log the data over the serial
     if((counterTime + 1000) < millis()){
+      Serial.print("Moisture: ");
+      Serial.println(moisture);
+
       Serial.print("Humidity: ");
-      Serial.println(environment_Humidity_GetLevel());
+      Serial.println(humidity);
 
       Serial.print("Temperature: ");
-      Serial.println(environment_Temperature_GetLevel());
-
-      Serial.print("Moisture: ");
-      Serial.println(moisture_GetLevel());
+      Serial.println(temperature);
 
       Serial.print("Light: ");
-      Serial.println(light_GetLevel());
+      Serial.println(light);
 
       counterTime = millis();
     }

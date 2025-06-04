@@ -107,6 +107,10 @@
   #ifndef LIGHT_LEDS_TIME
     #define LIGHT_LEDS_TIME 2*1000
   #endif
+  
+  #ifndef LIGHT_LEDS_MINIMUM_DELAY
+    #define LIGHT_LEDS_MINIMUM_DELAY 5*1000
+  #endif
 #endif
 
 #ifdef SLEEP_ENABLE

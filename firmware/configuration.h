@@ -80,6 +80,9 @@
   #define LIGHT_LEDS_PIN 21
   // Keep the leds on for a minimum time (in milliseconds). Default 2*1000 (2 seconds)
   #define LIGHT_LEDS_TIME 2*1000
+  // After turning off the leds wait X milliseconds before turning on again.
+  // Default 5*1000 (5 seconds)
+  #define LIGHT_LEDS_MINIMUM_DELAY 5*1000
 #endif
 
 // Enable sleep mode. Turn off the device at target hour and back on at target hour

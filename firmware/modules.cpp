@@ -45,7 +45,7 @@ void printVariables () {
   #ifdef DEBUG
     Serial.println("--- Environmental variables ---");
     
-    #pragma region Data
+    // region Data
     Serial.println("[Data configurations]");
     Serial.print("Save data: ");
 
@@ -68,9 +68,9 @@ void printVariables () {
       Serial.println("0");
     #endif
 
-    #pragma endregion Data
+    // endregion Data
 
-    #pragma region Moisture
+    // region Moisture
     Serial.println("[Moisture]");
     Serial.print("Moisture enable: ");
 
@@ -102,9 +102,9 @@ void printVariables () {
       Serial.println("0");
     #endif
 
-    #pragma endregion Moisture
+    // endregion Moisture
 
-    #pragma region Environment
+    // region Environment
     Serial.println("[Environment]");
     Serial.print("Environment enable: ");
 
@@ -147,9 +147,9 @@ void printVariables () {
       Serial.println("0");
     #endif
 
-    #pragma endregion Environment
+    // endregion Environment
 
-    #pragma region Light
+    // region Light
     Serial.println("[Light]");
     Serial.print("Light enable: ");
 
@@ -167,14 +167,17 @@ void printVariables () {
       
       Serial.print("Light LEDs time ON: ");
       Serial.println(LIGHT_LEDS_TIME);
+
+      Serial.print("Light LEDs minimum delay between each trigger: ");
+      Serial.println(LIGHT_LEDS_MINIMUM_DELAY);
     #endif
     #ifndef LIGHT_ENABLE
       Serial.println("0");
     #endif
 
-    #pragma endregion Light
+    // endregion Light
 
-    #pragma region Sleep
+    // region Sleep
     Serial.println("[Sleep]");
     Serial.print("Sleep enable: ");
 
@@ -194,7 +197,7 @@ void printVariables () {
       Serial.println("0");
     #endif
 
-    #pragma endregion Sleep
+    // endregion Sleep
 
     Serial.println();
   #endif
@@ -208,12 +211,17 @@ void printVariables () {
 #pragma region Moisture
 
 float moisture_GetLevel () {
-   // Read raw sensor value
-  float rawValue = analogRead(MOISTURE_SENSOR_PIN);
-  
-  // Convert to moisture percentage
-  float moisturePercentage = map(rawValue, MOISTURE_LEVEL_MIN, MOISTURE_LEVEL_MAX, 0, 100);
-  return constrain(moisturePercentage, 0, 100);
+  #ifdef MOISTURE_ENABLE
+    // Read raw sensor value
+    float rawValue = analogRead(MOISTURE_SENSOR_PIN);
+    
+    // Convert to moisture percentage
+    float moisturePercentage = map(rawValue, MOISTURE_LEVEL_MIN, MOISTURE_LEVEL_MAX, 0, 100);
+    return constrain(moisturePercentage, 0, 100);
+  #endif
+  #ifndef MOISTURE_ENABLE
+    return -1;
+  #endif
 }
 
 void moisture_PumpWater_ON () {
@@ -229,17 +237,27 @@ void moisture_PumpWater_OFF () {
 #pragma region Environment
 
 float environment_Humidity_GetLevel () {
-  float read = environment_Sensor.readHumidity();
-  if (isnan(read)) read = 0;
+  #ifdef ENVIRONMENT_HUMIDITY_ENABLE
+    float read = environment_Sensor.readHumidity();
+    if (isnan(read)) read = 0;
 
-  return read;
+    return read;
+  #endif
+  #ifndef ENVIRONMENT_HUMIDITY_ENABLE
+    return -1;
+  #endif
 }
 
 float environment_Temperature_GetLevel () {
-  float read = environment_Sensor.readTemperature();
-  if (isnan(read)) read = 0;
+  #ifdef ENVIRONMENT_TEMPERATURE_ENABLE
+    float read = environment_Sensor.readTemperature();
+    if (isnan(read)) read = 0;
 
-  return read;
+    return read;
+  #endif
+  #ifndef ENVIRONMENT_TEMPERATURE_ENABLE
+    return -1;
+  #endif
 }
 
 void environment_Fans_ON () {
@@ -255,12 +273,17 @@ void environment_Fans_OFF () {
 #pragma region Light
 
 float light_GetLevel () {
-   // Read raw sensor value
-  float rawValue = analogRead(LIGHT_SENSOR_PIN);
-  
-  // Convert to light percentage
-  float lightPercentage = map(rawValue, LIGHT_LEVEL_MIN, LIGHT_LEVEL_MAX, 0, 100);
-  return constrain(lightPercentage, 0, 100);
+  #ifdef LIGHT_ENABLE
+    // Read raw sensor value
+    float rawValue = analogRead(LIGHT_SENSOR_PIN);
+    
+    // Convert to light percentage
+    float lightPercentage = map(rawValue, LIGHT_LEVEL_MIN, LIGHT_LEVEL_MAX, 0, 100);
+    return constrain(lightPercentage, 0, 100);
+  #endif
+  #ifndef LIGHT_ENABLE
+    return -1;
+  #endif
 }
 
 void light_LEDs_ON () {
@@ -303,7 +326,7 @@ void data_Store(float moisture, float humidity, float temperature, float light) 
       Serial.print("Satellites: ");
       Serial.println(gps.satellites.value()); // Number of satellites in use (u32)
 
-	    String ret = String(gps.date.year()) + "-" + String(gps.date.month()) + "-" + String(gps.date.day()) + " " + String(gps.time.hour()) + ":" + String(gps.time.minute()) + ":" + String(gps.time.second());
+      String ret = String(gps.date.year()) + "-" + String(gps.date.month()) + "-" + String(gps.date.day()) + " " + String(gps.time.hour()) + ":" + String(gps.time.minute()) + ":" + String(gps.time.second());
       Serial.print("UTC Time: ");
       Serial.println(ret);
     #endif
