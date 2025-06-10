@@ -361,10 +361,10 @@ void sleep_Check () {
 
   if (inside) {
     #if SLEEP_START_TIME < SLEEP_END_TIME
-      bool time = (SLEEP_END_TIME - SLEEP_START_TIME);
+      int time = (SLEEP_END_TIME - SLEEP_START_TIME);
     #endif
     #if SLEEP_START_TIME > SLEEP_END_TIME
-      bool time = ((24 - SLEEP_START_TIME) + SLEEP_END_TIME);
+      int time = ((24 - SLEEP_START_TIME) + SLEEP_END_TIME);
     #endif
 
     Serial.print("Go to sleep for ");
